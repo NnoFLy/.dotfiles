@@ -29,9 +29,19 @@ if ! command -v tmux &> /dev/null; then
     exit 1
 fi
 
+if tmux has-session -t "main" 2>/dev/null; then
+    ALREADY_RUNNING=1
+fi
+
 for session in "${SESSIONS[@]}"; do
     setup_session "$session"
 done
+
+if [[ "${ALREADY_RUNNING:-}" == "1" ]]; then
+    [[ -n "${TMUX:-}" ]] && exit 0
+    tmux attach
+    exit 0
+fi
 
 TARGET="${1:-$DEFAULT_SESSION}"
 

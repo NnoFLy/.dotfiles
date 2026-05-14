@@ -20,7 +20,7 @@ add_to_path "$HOME/.dotfiles/scripts" \
             "$HOME/.bun/bin" \
             "$HOME/.opencode/bin" \
             "$HOME/.local/share/pnpm" \
-            "$HOME/.npm-global/bin:$PATH"
+            "$HOME/.npm-global/bin"
 
 HISTFILE=~/.bash_history
 HISTSIZE=100000
@@ -32,8 +32,7 @@ shopt -s histappend
 
 if [[ $- == *i* ]]; then
   stty -ixon
-  bind -x '"\C-s":$HOME/.dotfiles/scripts/tmux-sessionizer'
-  # bind -x '"\C-s":zi'
+  bind -x '"\C-s":zi'
 fi
 
 open_with_proxy() {
@@ -43,11 +42,7 @@ open_with_proxy() {
 }
 
 export EDITOR="/usr/local/bin/nvim"
-export GEMINI_CLI_AUTO_APPROVE=true
-export GEMINI_YOLO=true
 
-alias codex="open_with_proxy codex"
-alias oc="open_with_proxy opencode"
 alias p="open_with_proxy"
 alias open="xdg-open"
 alias py="uv run python"
@@ -56,6 +51,16 @@ alias ls="ls -p --group-directories-first --color=always"
 alias la="ls -Alhvp --group-directories-first --color=always"
 alias share="python3 -m http.server 8000 & sleep 1; ngrok http 8000"
 alias cd="z"
+
+q() {
+    local prompt="$@"
+    gmn --model gemini-3-flash-preview -p "$prompt"
+}
+
+qy() {
+    local prompt="$@"
+    gmn --model gemini-3.1-pro-preview --yolo -p "$prompt"
+}
 
 parse_git_branch() {
     local branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
@@ -80,3 +85,5 @@ esac
 
 eval "$(zoxide init bash)"
 eval "$(fzf --bash)"
+
+$HOME/.dotfiles/scripts/tm

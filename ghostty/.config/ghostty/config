@@ -29,6 +29,7 @@ keybind = ctrl+tab=unbind
 keybind = ctrl+tab=unbind
 keybind = ctrl+shift+p=unbind
 keybind = ctrl+shift+n=unbind
+keybind = ctrl+alt+l=unbind
 
 keybind = ctrl+alt+h=goto_split:left
 keybind = ctrl+alt+j=goto_split:down

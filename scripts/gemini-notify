@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+TITLE=$1
+MSG=$2
+
+if command -v notify-send &> /dev/null; then
+    notify-send "$TITLE" "$MSG"
+elif grep -qEi "(Microsoft|WSL)" /proc/version &> /dev/null; then
+    if command -v wsl-notify-send.exe &> /dev/null; then
+        wsl-notify-send.exe --category "gemini" "$TITLE" "$MSG"
+    else
+        powershell.exe -Command "[reflection.assembly]::loadwithpartialname('System.Windows.Forms'); [reflection.assembly]::loadwithpartialname('System.Drawing'); \$notify = new-object system.windows.forms.notifyicon; \$notify.icon = [System.Drawing.SystemIcons]::Information; \$notify.visible = \$true; \$notify.showballoontip(10,'$TITLE','$MSG',[system.windows.forms.tooltipicon]::None)"
+    fi
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    osascript -e "display notification \"$MSG\" with title \"$TITLE\""
+fi
