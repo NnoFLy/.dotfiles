@@ -1,52 +1,158 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/env python3
+import os
+import shlex
+import shutil
+import subprocess
+import sys
+from dataclasses import dataclass, field
+from typing import Final
 
-SESSIONS=("main" "prog" "ssh")
-DEFAULT_SESSION="main"
 
-setup_session() {
-    local sn="$1"
-    if ! tmux has-session -t "$sn" 2>/dev/null; then
-        tmux new-session -ds "$sn" -c "$HOME"
-        configure_session "$sn"
-    fi
-}
+@dataclass
+class Window:
+    name: str
+    path: str = "$HOME"
+    cmd: str | None = None
 
-configure_session() {
-    local sn="$1"
-    case "$sn" in
-        "main")
-            tmux new-window -t "$sn" -n "Notes" -c "$HOME/Dropbox/"
-            ;;
-        "prog")
-            tmux send-keys -t "$sn" "cd $HOME/code/ && clear" C-m
-            ;;
-    esac
-}
 
-if ! command -v tmux &> /dev/null; then
-    echo "Error: tmux is not installed." >&2
-    exit 1
-fi
+@dataclass
+class Session:
+    session_name: str
+    windows: list[Window] = field(default_factory=list)
 
-if tmux has-session -t "main" 2>/dev/null; then
-    ALREADY_RUNNING=1
-fi
 
-for session in "${SESSIONS[@]}"; do
-    setup_session "$session"
-done
+DEFAULT_SESSION: Final[str] = "main"
 
-if [[ "${ALREADY_RUNNING:-}" == "1" ]]; then
-    [[ -n "${TMUX:-}" ]] && exit 0
-    tmux attach
-    exit 0
-fi
+SESSIONS: tuple[Session, ...] = (
+    Session(
+        session_name="main",
+        windows=[
+            Window(name="bash", path="$HOME"),
+            Window(name="Notes", path="$HOME/Dropbox/", cmd="nvim"),
+        ],
+    ),
+    Session(
+        session_name="prog",
+        windows=[
+            Window(name="prog", path="$HOME", cmd="tmux-sessionizer -c"),
+        ],
+    ),
+    Session(
+        session_name="ssh",
+        windows=[
+            Window(name="ssh", path="$HOME"),
+        ],
+    ),
+)
 
-TARGET="${1:-$DEFAULT_SESSION}"
 
-if [[ -n "${TMUX:-}" ]]; then
-    tmux switch-client -t "$TARGET"
-else
-    tmux attach -t "$TARGET:^"
-fi
+def run(cmd: str) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(cmd, shell=True, check=False)
+
+
+def run_output(cmd: str) -> tuple[int, str]:
+    res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    return res.returncode, res.stdout.strip()
+
+
+def ensure_tmux_installed() -> None:
+    if not shutil.which("tmux"):
+        print("Error: tmux is not installed.", file=sys.stderr)
+        sys.exit(1)
+
+
+def setup_window(q_sn: str, index: int, win: Window) -> None:
+    wname = win.name
+    wpath = os.path.expandvars(win.path)
+    wcmd = win.cmd or ""
+
+    q_wname = shlex.quote(wname)
+    q_wpath = shlex.quote(wpath)
+
+    if index == 0:
+        _ = run(
+            f"tmux rename-window -t {q_sn}:1 {q_wname} 2>/dev/null || "
+            + f"tmux rename-window -t {q_sn}:0 {q_wname} 2>/dev/null"
+        )
+
+        _ = run(f'tmux send-keys -t {q_sn}:{q_wname} "cd {q_wpath}" C-m')
+        if wcmd:
+            _ = run(f"tmux send-keys -t {q_sn}:{q_wname} {shlex.quote(wcmd)} C-m")
+    else:
+        _ = run(f"tmux new-window -t {q_sn} -n {q_wname} -c {q_wpath}")
+        if wcmd:
+            _ = run(f"tmux send-keys -t {q_sn}:{q_wname} {shlex.quote(wcmd)} C-m")
+
+
+def setup_session(session_data: Session) -> None:
+    sn = session_data.session_name
+    q_sn = shlex.quote(sn)
+
+    ret, _ = run_output(f"tmux has-session -t {q_sn} 2>/dev/null")
+    if ret != 0:
+        home_dir = os.environ.get("HOME", os.path.expanduser("~"))
+        _ = run(f"tmux new-session -ds {q_sn} -c {shlex.quote(home_dir)}")
+
+        for i, win in enumerate(session_data.windows):
+            setup_window(q_sn, i, win)
+
+        if session_data.windows:
+            first_win_name = session_data.windows[0].name
+            _ = run(f"tmux select-window -t {q_sn}:{shlex.quote(first_win_name)}")
+
+
+def setup_all_sessions(config: tuple[Session, ...]) -> None:
+    for session_data in config:
+        setup_session(session_data)
+
+
+def get_last_used_session() -> str:
+    ret, out = run_output(
+        'tmux ls -F "#{session_last_attached} #{session_name}" 2>/dev/null'
+    )
+    if ret != 0 or not out:
+        return ""
+
+    lines = out.splitlines()
+
+    def get_timestamp(line: str) -> int:
+        parts = line.split(" ", 1)
+        return int(parts[0]) if parts and parts[0].isdigit() else -1
+
+    lines.sort(key=get_timestamp, reverse=True)
+    if lines:
+        parts = lines[0].split(" ", 1)
+        if len(parts) > 1:
+            return parts[1]
+    return ""
+
+
+def get_target_session(default_session: str) -> str:
+    if len(sys.argv) > 1 and sys.argv[1]:
+        return sys.argv[1]
+
+    last_used = get_last_used_session()
+    if last_used:
+        return last_used
+
+    return default_session
+
+
+def attach_or_switch(target: str) -> None:
+    if os.environ.get("TMUX"):
+        if len(sys.argv) > 1 and sys.argv[1]:
+            _ = run(f"tmux switch-client -t {shlex.quote(target)}")
+    else:
+        os.execvp("tmux", ["tmux", "attach", "-t", target])
+
+
+def main() -> None:
+    ensure_tmux_installed()
+
+    setup_all_sessions(SESSIONS)
+    target = get_target_session(DEFAULT_SESSION)
+    attach_or_switch(target)
+
+
+if __name__ == "__main__":
+    main()

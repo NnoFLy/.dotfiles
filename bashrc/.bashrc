@@ -32,7 +32,7 @@ shopt -s histappend
 
 if [[ $- == *i* ]]; then
   stty -ixon
-  bind -x '"\C-s":zi'
+  bind -x '"\C-s":tmux-sessionizer -c'
 fi
 
 open_with_proxy() {

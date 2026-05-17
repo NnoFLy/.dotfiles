@@ -259,10 +259,22 @@ main() {
     local selected
     local selected_name
     local tmux_running
+    local replace_current_pane=
 
-    if [[ $# -eq 1 ]]; then
-        selected=$1
-    else
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -c)
+                replace_current_pane=1
+                shift
+                ;;
+            *)
+                selected=$1
+                shift
+                ;;
+        esac
+    done
+
+    if [[ -z $selected ]]; then
         selected=$(find ~/.dotfiles /mnt/d/code/ /mnt/d/apps/Dropbox/ ~/Dropbox/ ~/.config ~/code/work/ ~/code/personal/ ~/Sync  -mindepth 0 -maxdepth 1 -type d | fzf)
     fi
 
@@ -278,6 +290,14 @@ main() {
 
     selected=$SELECTED_WORKTREE_PATH
     selected_name=$SELECTED_WORKTREE_NAME
+
+    if [[ -n $replace_current_pane ]] && [[ -n $TMUX ]]; then
+        tmux rename-window "$selected_name"
+        tmux respawn-pane -k -c "$selected"
+        hydrate "$selected_name" "$selected"
+        return
+    fi
+
     tmux_running=$(pgrep tmux)
 
     if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
