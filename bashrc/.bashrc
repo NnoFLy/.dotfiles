@@ -52,6 +52,14 @@ alias la="ls -Alhvp --group-directories-first --color=always"
 alias share="python3 -m http.server 8000 & sleep 1; ngrok http 8000"
 alias cd="z"
 
+gitu() {
+    if [ -n "$NVIM" ]; then
+        GITU_SHOW_EDITOR="nvim --server $NVIM --remote-tab" command gitu "$@"
+    else
+        command gitu "$@"
+    fi
+}
+
 q() {
     local prompt="$@"
     gmn --model gemini-3-flash-preview -p "$prompt"
@@ -78,12 +86,15 @@ fi
 # pnpm
 export PNPM_HOME="/home/nnofly/.local/share/pnpm"
 case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
 # pnpm end
 
 eval "$(zoxide init bash)"
 eval "$(fzf --bash)"
 
-$HOME/.dotfiles/scripts/tm
+# $HOME/.dotfiles/scripts/tm
+
+# Added by Antigravity CLI installer
+export PATH="/home/nnofly/.local/bin:$PATH"

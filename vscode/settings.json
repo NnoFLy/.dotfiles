@@ -311,7 +311,6 @@
     "editor.foldingStrategy": "auto",
     "files.trimTrailingWhitespace": false,
   },
-  "workbench.activityBar.location": "top",
   "window.commandCenter": false,
   "workbench.layoutControl.enabled": false,
   "window.customTitleBarVisibility": "windowed",
@@ -331,7 +330,6 @@
 
   "workbench.preferredDarkColorTheme": "Solarized Osaka",
   "workbench.preferredLightColorTheme": "Monochrome Light",
-  "workbench.sideBar.location": "right",
   "gitlens.blame.highlight.enabled": false,
   "gitlens.currentLine.enabled": false,
   "gitlens.codeLens.enabled": false,
@@ -352,4 +350,13 @@
     "*.s3db": "${capture}.${extname}-*",
   },
   "breadcrumbs.enabled": false,
+  "yaml.schemas": {
+    "file:///home/nnofly/.vscode/extensions/continue.continue-1.2.22-linux-x64/config-yaml-schema.json": [
+        ".continue/**/*.yaml"
+    ],
+    "file:///home/nnofly/.vscode/extensions/continue.continue-2.0.0-linux-x64/config-yaml-schema.json": [
+        ".continue/**/*.yaml"
+    ]
+},
+  "workbench.secondarySideBar.showLabels": false,
 }

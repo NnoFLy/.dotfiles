@@ -55,3 +55,7 @@ alias share='python3 -m http.server 8000 & sleep 1; ngrok http 8000'
 alias cd='z'
 
 zoxide init fish | source
+
+
+# Added by Antigravity CLI installer
+set -gx PATH "/home/nnofly/.local/bin" $PATH

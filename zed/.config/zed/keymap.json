@@ -5,6 +5,8 @@
 
       "ctrl-q": "pane::CloseActiveItem",
 
+      "ctrl-b": "workspace::ToggleRightDock",
+      "ctrl-alt-b": "workspace::ToggleLeftDock",
       "alt-i": "pane::ActivatePreviousItem",
       "alt-o": "pane::ActivateNextItem",
       "alt-shift-i": "pane::SwapItemLeft",
@@ -31,7 +33,6 @@
 
       "g o": "vim::StartOfDocument",
 
-      "ctrl-b": "workspace::ToggleLeftDock",
       "ctrl-y": ["workspace::SendKeystrokes", "4 ctrl-y"],
       "ctrl-e": ["workspace::SendKeystrokes", "4 ctrl-e"],
       "alt-j": "editor::AddSelectionBelow",
@@ -47,13 +48,6 @@
       "alt-y p": "workspace::CopyRelativePath",
 
       "ctrl-k g l": "git_graph::Open",
-    },
-  },
-  {
-    "context": "vim_mode == normal || vim_mode == visual",
-    "bindings": {
-      "s": "vim::PushSneak",
-      "S": "vim::PushSneakBackward",
     },
   },
   {
