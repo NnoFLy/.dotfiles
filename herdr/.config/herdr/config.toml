@@ -1,0 +1,86 @@
+onboarding = false
+
+[theme]
+# catppuccin, terminal, tokyo-night, dracula, nord, gruvbox, one-dark, solarized, kanagawa, rose-pine, vesper
+name = "terminal"
+
+auto_switch = false
+dark_name = "terminla"
+light_name = "rose-pine-dawn"
+
+[keys]
+prefix = "ctrl+q"
+
+# help = "prefix+?"
+# settings = "prefix+s"
+# detach = "prefix+q"
+# reload_config = "prefix+shift+r"
+# open_notification_target = "prefix+o"
+# workspace_picker = "prefix+w"
+goto = "ctrl+alt+g"
+# new_worktree = "prefix+shift+g"
+# open_worktree = ""    # optional, unset by default
+# remove_worktree = ""  # optional, unset by default; opens confirmation
+new_workspace = "ctrl+alt+shift+c"
+rename_workspace = "ctrl+alt+shift+r"
+close_workspace = "ctrl+alt+shift+x"
+previous_workspace = "ctrl+shift+alt+p" # optional, unset by default
+next_workspace = "ctrl+shift+alt+n"     # optional, unset by default
+# previous_agent = ""     # optional, unset by default
+# next_agent = ""         # optional, unset by default
+focus_agent = "prefix+alt+1..9"        # optional indexed binding, e.g. "prefix+alt+1..9"
+# remote_image_paste = "ctrl+v" # only active in herdr --remote; empty disables raw-key image paste
+new_tab = "ctrl+alt+c"
+rename_tab = "ctrl+alt+r"
+previous_tab = "ctrl+alt+p"
+next_tab = "ctrl+alt+n"
+switch_tab = "ctrl+alt+1..9"
+switch_workspace = "prefix+1..9"   # optional indexed binding, e.g. "prefix+shift+1..9"
+# close_tab = "prefix+x"
+# rename_pane = "prefix+shift+p"
+# edit_scrollback = "prefix+e"
+# focus_pane_left = "prefix+h"
+# focus_pane_down = "prefix+j"
+# focus_pane_up = "prefix+k"
+# focus_pane_right = "prefix+l"
+# cycle_pane_next = "prefix+tab"
+# cycle_pane_previous = "prefix+shift+tab"
+last_pane = "ctrl+tab"          # optional, unset by default; bind e.g. "prefix+tab" for global back-and-forth
+split_vertical = "ctrl+alt+v"
+split_horizontal = "ctrl+alt+s"
+close_pane = "ctrl+alt+x"
+zoom = "ctrl+alt+z"       # legacy alias: fullscreen
+# resize_mode = "prefix+r"
+toggle_sidebar = "ctrl+alt+b"
+
+# navigate_workspace_up = "up"
+# navigate_workspace_down = "down"
+# navigate_pane_left = "h"      # left arrow always focuses the pane to the left
+# navigate_pane_down = "j"
+# navigate_pane_up = "k"
+# navigate_pane_right = "l"     # right arrow always focuses the pane to the right
+
+[ui]
+mouse_scroll_lines = 1
+prompt_new_tab_name = false
+pane_borders = false
+pane_gaps = false
+show_agent_labels_on_pane_borders = true
+
+[ui.toast]
+# off, herdr, terminal, system
+delivery = "system"
+# delay_seconds = 1
+
+[ui.sound]
+enabled = true
+
+[ui.sound.agents]
+droid = "on"
+
+[session]
+resume_agents_on_restore = true
+
+[experimental]
+kitty_graphics = true
+pane_history = true

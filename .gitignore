@@ -1,1 +1,3 @@
 __pycache__/
+headr/
+!herdr/config.toml

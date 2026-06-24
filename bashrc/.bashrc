@@ -52,6 +52,7 @@ alias ls="ls -p --group-directories-first --color=always"
 alias la="ls -Alhvp --group-directories-first --color=always"
 alias share="python3 -m http.server 8000 & sleep 1; ngrok http 8000"
 alias cd="z"
+alias h="herdr"
 
 parse_git_branch() {
     local branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
