@@ -1,0 +1,9 @@
+appindicatorsupport@rgcjonas.gmail.com
+Bluetooth-Battery-Meter@maniacx.github.com
+color-picker@tuberry
+caffeine@patapon.info
+snaptext@cwittenberg
+Vitals@CoreCoding.com
+all-in-one-clipboard@NiffirgkcaJ.github.com
+blur-my-shell@aunetx
+gsconnect@andyholmes.github.io

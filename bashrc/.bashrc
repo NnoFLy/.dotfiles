@@ -47,7 +47,7 @@ export EDITOR="/usr/local/bin/nvim"
 alias p="open_with_proxy"
 alias open="xdg-open"
 alias py="uv run python"
-alias vim="nvim"
+# alias vim="nvim"
 alias ls="ls -p --group-directories-first --color=always"
 alias la="ls -Alhvp --group-directories-first --color=always"
 alias share="python3 -m http.server 8000 & sleep 1; ngrok http 8000"
@@ -88,7 +88,8 @@ if [ -d "$FNM_PATH" ]; then
   eval "$(fnm env --shell bash)"
 fi
 
-# Sync terminal proxy with GNOME settings (including SOCKS)
+# export ALL_PROXY=socks5h://127.0.0.1:10808
+
 gsettings_sync_proxy() {
     local mode=$(gsettings get org.gnome.system.proxy mode | tr -d "'")
     if [ "$mode" = "manual" ]; then
@@ -116,4 +117,4 @@ gsettings_sync_proxy() {
         unset http_proxy https_proxy ftp_proxy no_proxy socks_proxy all_proxy HTTP_PROXY HTTPS_PROXY FTP_PROXY NO_PROXY SOCKS_PROXY ALL_PROXY
     fi
 }
-gsettings_sync_proxy
+# gsettings_sync_proxy
