@@ -1,0 +1,6 @@
+{
+  "notify": {
+    "enable": false,
+    "script": "~/.pi/agent/pi-lab/notify.sh"
+  }
+}

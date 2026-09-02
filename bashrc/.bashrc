@@ -11,15 +11,13 @@ add_to_path() {
     done
 }
 
-add_to_path "$HOME/.dotfiles/scripts" \
-            "$HOME/.local/bin" \
+add_to_path "$HOME/.local/bin" \
             "$HOME/.cargo/bin" \
             "$HOME/apps/v2rayN-linux-64" \
             "$HOME/go/bin" \
             "$HOME/apps/bin" \
-            "$HOME/.bun/bin" \
-            "$HOME/.opencode/bin" \
             "$HOME/.local/share/pnpm" \
+            "$HOME/.dotfiles/tmux/scripts/" \
             "$HOME/.npm-global/bin"
 
 HISTFILE=~/.bash_history
@@ -32,13 +30,15 @@ shopt -s histappend
 
 if [[ $- == *i* ]]; then
   stty -ixon
-  # bind -x '"\C-s":tmux-sessionizer -c'
-  bind -x '"\C-s":zi'
+  bind -x '"\C-s":tmux-sessionizer'
+  # bind -x '"\C-s":zi'
 fi
 
 open_with_proxy() {
   HTTP_PROXY=http://127.0.0.1:10808 \
   HTTPS_PROXY=http://127.0.0.1:10808 \
+  http_proxy=http://127.0.0.1:10808 \
+  https_proxy=http://127.0.0.1:10808 \
   command "$@"
 }
 
@@ -47,7 +47,7 @@ export EDITOR="/usr/local/bin/nvim"
 alias p="open_with_proxy"
 alias open="xdg-open"
 alias py="uv run python"
-# alias vim="nvim"
+alias vim="nvim"
 alias ls="ls -p --group-directories-first --color=always"
 alias la="ls -Alhvp --group-directories-first --color=always"
 alias cd="z"
@@ -59,34 +59,28 @@ parse_git_branch() {
     fi
 }
 
+function print_osc7() {
+    printf '\033]7;file://%s\033\\' "$PWD"
+}
+
+function print_osc133_prompt() {
+    printf '\033]133;A\007'
+}
+
 if [[ $- == *i* ]]; then
-  source /usr/share/git/completion/git-prompt.sh 2>/dev/null || true
-  PS1='\w$(parse_git_branch) $ '
-  PROMPT_COMMAND="history -a; history -n"
+    source /usr/share/git/completion/git-prompt.sh 2>/dev/null || true
+    PS1='\w$(parse_git_branch) $ '
 fi
+
+PROMPT_COMMAND=(
+    'history -a'
+    'history -n'
+    'print_osc7'
+    'print_osc133_prompt'
+)
 
 eval "$(zoxide init bash)"
 eval "$(fzf --bash)"
-
-# pnpm
-export PNPM_HOME="/home/nnofly/.local/share/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end
-
-# Added by Antigravity CLI installer
-export PATH="/home/nnofly/.local/bin:$PATH"
-
-# fnm
-FNM_PATH="/home/nnofly/.local/share/fnm"
-if [ -d "$FNM_PATH" ]; then
-  export PATH="$FNM_PATH:$PATH"
-  eval "$(fnm env --shell bash)"
-fi
-
-# export ALL_PROXY=socks5h://127.0.0.1:10808
 
 gsettings_sync_proxy() {
     local mode=$(gsettings get org.gnome.system.proxy mode | tr -d "'")
@@ -115,4 +109,21 @@ gsettings_sync_proxy() {
         unset http_proxy https_proxy ftp_proxy no_proxy socks_proxy all_proxy HTTP_PROXY HTTPS_PROXY FTP_PROXY NO_PROXY SOCKS_PROXY ALL_PROXY
     fi
 }
-# gsettings_sync_proxy
+
+gsettings_sync_proxy
+
+# pnpm
+export PNPM_HOME="/home/nnofly/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
+# pnpm end
+
+# fnm
+FNM_PATH="/home/nnofly/.local/share/fnm"
+if [ -d "$FNM_PATH" ]; then
+  export PATH="$FNM_PATH:$PATH"
+  eval "$(fnm env --shell bash)"
+fi
+. "$HOME/.cargo/env"

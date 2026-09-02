@@ -1,0 +1,45 @@
+{
+  "lastChangelogVersion": "0.84.2",
+  "theme": "dark",
+  "quietStartup": true,
+  "collapseChangelog": true,
+  "enableInstallTelemetry": false,
+  "externalEditor": "emacsclient --reuse-frame --alternate-editor=emacs",
+  "defaultProvider": "openai-codex",
+  "defaultModel": "gpt-5.6-sol",
+  "defaultThinkingLevel": "low",
+  "subagents": {
+    "defaultThinking": "medium",
+    "agentOverrides": {
+      "advisor": {
+        "thinking": "medium"
+      },
+      "oracle": {
+        "thinking": "medium"
+      },
+      "planner": {
+        "thinking": "medium"
+      },
+      "reviewer": {
+        "thinking": "medium"
+      },
+      "worker": {
+        "thinking": "medium"
+      }
+    }
+  },
+  "packages": [
+    "npm:@pi-lab/notify",
+    "npm:pi-web-access",
+    "npm:pi-simplify",
+    "npm:context-mode",
+    "npm:pi-mcp-adapter"
+  ],
+  "hideThinkingBlock": true,
+  "outputPad": 0,
+  "treeFilterMode": "no-tools",
+  "autocompleteMaxVisible": 8,
+  "terminal": {
+    "showImages": false
+  }
+}

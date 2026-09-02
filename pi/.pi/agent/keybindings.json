@@ -1,0 +1,6 @@
+{
+  "tui.editor.cursorUp": ["up"],
+  "tui.editor.cursorDown": ["down"],
+  "app.model.cycleForward": ["ctrl+shift+n"],
+  "app.model.cycleBackward": ["ctrl+shift+p"]
+}
