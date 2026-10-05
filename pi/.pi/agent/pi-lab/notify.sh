@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ ${PI_SUBAGENT_CHILD:-} == "1" || -n ${PI_SUBAGENT_PARENT_SESSION:-} ]]; then
+  exit 0
+fi
+
 payload=$(cat)
 event=$(/usr/sbin/jq -r '.event // ""' <<<"$payload")
 title=$(/usr/sbin/jq -r '.title // "Pi"' <<<"$payload")
@@ -16,13 +20,16 @@ else
 fi
 
 case "$event" in
-  permission_ask)
-    urgency=critical
-    icon=dialog-warning
-    ;;
-  *)
+  agent_settled)
     urgency=normal
     icon=dialog-information
+    ;;
+  ask_user_blocked)
+    urgency=critical
+    icon=dialog-question
+    ;;
+  *)
+    exit 0
     ;;
 esac
 

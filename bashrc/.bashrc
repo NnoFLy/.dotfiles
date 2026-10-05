@@ -60,11 +60,12 @@ parse_git_branch() {
 }
 
 function print_osc7() {
-    printf '\033]7;file://%s\033\\' "$PWD"
-}
-
-function print_osc133_prompt() {
-    printf '\033]133;A\007'
+    local path=$PWD
+    path=${path//%/%25}
+    path=${path// /%20}
+    path=${path//#/%23}
+    path=${path//\?/%3F}
+    printf '\033]7;file://%s\033\\' "$path"
 }
 
 if [[ $- == *i* ]]; then
@@ -76,7 +77,6 @@ PROMPT_COMMAND=(
     'history -a'
     'history -n'
     'print_osc7'
-    'print_osc133_prompt'
 )
 
 eval "$(zoxide init bash)"
@@ -127,3 +127,15 @@ if [ -d "$FNM_PATH" ]; then
   eval "$(fnm env --shell bash)"
 fi
 . "$HOME/.cargo/env"
+
+# Pi
+export PATH="/home/nnofly/.pi/agent/bin:$PATH"
+
+. "$HOME/.local/bin/env"
+
+# fnm
+FNM_PATH="/home/nnofly/.local/share/fnm"
+if [ -d "$FNM_PATH" ]; then
+  export PATH="$FNM_PATH:$PATH"
+  eval "$(fnm env --shell bash)"
+fi

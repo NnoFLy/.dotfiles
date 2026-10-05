@@ -1,31 +1,34 @@
 {
-  "lastChangelogVersion": "1.0.2",
-  "theme": "dark",
-  "quietStartup": true,
-  "collapseChangelog": true,
-  "enableInstallTelemetry": false,
-  "externalEditor": "emacsclient --reuse-frame --alternate-editor=emacs",
-  "defaultProvider": "openai-codex",
-  "packages": [
-    "npm:@pi-lab/notify",
-    "npm:pi-web-access",
-    "npm:pi-simplify",
-    "npm:context-mode",
-    "npm:@juicesharp/rpiv-ask-user-question",
-    "npm:pi-subagents",
-    "npm:@sreetej510/pi-usage"
-  ],
-  "hideThinkingBlock": true,
-  "outputPad": 0,
-  "treeFilterMode": "no-tools",
-  "autocompleteMaxVisible": 8,
-  "terminal": {
-    "showImages": false
-  },
-  "fullscreenCopyOnSelect": true,
-  "tuiMode": "regular",
-  "modelThinkingLevels": {
-    "openai-codex/gpt-6.1-sol": "xhigh"
-  },
-  "defaultProjectTrust": "ask"
+    "lastChangelogVersion": "1.0.2",
+    "theme": "dark",
+    "quietStartup": true,
+    "collapseChangelog": true,
+    "enableInstallTelemetry": false,
+    "externalEditor": "emacsclient --reuse-frame --alternate-editor=emacs",
+    "defaultProvider": "openai-codex",
+    "packages": [
+        "npm:@pi-lab/notify",
+        "npm:pi-web-access",
+        "npm:pi-simplify",
+        "npm:context-mode",
+        "npm:@juicesharp/rpiv-ask-user-question",
+        "npm:pi-subagents",
+        "npm:@sreetej510/pi-usage"
+    ],
+    "hideThinkingBlock": true,
+    "outputPad": 0,
+    "treeFilterMode": "no-tools",
+    "autocompleteMaxVisible": 8,
+    "terminal": {
+        "showImages": false
+    },
+    "fullscreenCopyOnSelect": true,
+    "tuiMode": "regular",
+    "modelThinkingLevels": {
+        "openai-codex/gpt-6.1-sol": "high"
+    },
+    "defaultProjectTrust": "ask",
+    "subagents": {
+        "defaultModel": "gpt-6.1-sol"
+    }
 }
