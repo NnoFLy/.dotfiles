@@ -1,6 +1,25 @@
 {
   "notify": {
-    "enable": false,
-    "script": "~/.pi/agent/pi-lab/notify.sh"
+    "enable": true,
+    "backend": "auto",
+    "tmuxBell": true,
+    "includeProject": true,
+    "askUserDetail": "header",
+    "timeoutMs": 5000,
+    "dedupeMs": 1500,
+    "done": {
+      "enabled": true,
+      "title": "Pi",
+      "message": "Ready for input",
+      "urgency": "normal",
+      "icon": "dialog-information"
+    },
+    "askUser": {
+      "enabled": true,
+      "title": "Pi",
+      "message": "Waiting for your answer",
+      "urgency": "critical",
+      "icon": "dialog-question"
+    }
   }
 }
