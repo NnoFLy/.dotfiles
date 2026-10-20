@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { installSessionLivenessMonitor, type SessionLivenessMonitor } from "../pi-lab/notification-liveness.ts";
 
 const ASK_USER_PROMPT_EVENT = "rpiv:ask-user:prompt";
 const ASK_USER_BLOCKED_EVENT = "rpiv:ask-user:blocked";
@@ -35,6 +36,7 @@ export type NotificationConfig = {
 
 type SessionContext = {
 	cwd: string;
+	hasUI?: boolean;
 	sessionManager: {
 		getHeader(): { parentSession?: string } | null;
 	};
@@ -106,7 +108,7 @@ function readNotifyConfig(filePath: string): Record<string, unknown> {
 		return parsed.notify;
 	} catch (error) {
 		if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-			console.warn(`Pi notification config failed: ${error instanceof Error ? error.message : String(error)}`);
+			console.warn(`Pi notification config failed: ${eventBackendError(error)}`);
 		}
 		return {};
 	}
@@ -149,15 +151,16 @@ function readEventConfig(value: unknown, fallback: EventConfig): EventConfig {
 	};
 }
 
-function resolveScriptPath(value: unknown, cwd: string, home: string): string | undefined {
+function resolveScriptPath(value: unknown, configDir: string, home: string): string | undefined {
 	if (typeof value !== "string" || !value.trim()) return undefined;
 	if (value === "~") return home;
 	if (value.startsWith("~/")) return join(home, value.slice(2));
-	return isAbsolute(value) ? value : resolve(cwd, value);
+	return isAbsolute(value) ? value : resolve(configDir, value);
 }
 
 export function loadNotificationConfig(cwd: string, home = homedir()): NotificationConfig {
-	const globalConfig = readNotifyConfig(join(home, ".pi", "agent", "pi-lab", "notify.json"));
+	const globalConfigDir = join(home, ".pi", "agent", "pi-lab");
+	const globalConfig = readNotifyConfig(join(globalConfigDir, "notify.json"));
 	const localConfig = readNotifyConfig(join(cwd, ".pi", "pi-lab", "notify.json"));
 	const mergedDone = { ...(isRecord(globalConfig.done) ? globalConfig.done : {}), ...(isRecord(localConfig.done) ? localConfig.done : {}) };
 	const mergedAskUser = { ...(isRecord(globalConfig.askUser) ? globalConfig.askUser : {}), ...(isRecord(localConfig.askUser) ? localConfig.askUser : {}) };
@@ -171,7 +174,9 @@ export function loadNotificationConfig(cwd: string, home = homedir()): Notificat
 		askUserDetail: asAskUserDetail(raw.askUserDetail, DEFAULT_CONFIG.askUserDetail),
 		timeoutMs: asNumber(raw.timeoutMs, DEFAULT_CONFIG.timeoutMs, 100, 30_000),
 		dedupeMs: asNumber(raw.dedupeMs, DEFAULT_CONFIG.dedupeMs, 0, 60_000),
-		script: resolveScriptPath(raw.script, cwd, home),
+		// Executable hooks are user-owned, never selected by repository config.
+		// Relative hooks also resolve outside the potentially untrusted cwd.
+		script: resolveScriptPath(globalConfig.script, globalConfigDir, home),
 		done: readEventConfig(mergedDone, DEFAULT_CONFIG.done),
 		askUser: readEventConfig(mergedAskUser, DEFAULT_CONFIG.askUser),
 	};
@@ -179,11 +184,13 @@ export function loadNotificationConfig(cwd: string, home = homedir()): Notificat
 
 export function isMainSession(ctx: SessionContext, env: NodeJS.ProcessEnv = process.env): boolean {
 	if (env.PI_SUBAGENT_CHILD === "1" || env.PI_SUBAGENT_PARENT_SESSION) return false;
-	return !ctx.sessionManager.getHeader()?.parentSession;
+	// Interactive forks have ancestry too. Only headless descendants are
+	// conservatively treated as possible in-process foreground children.
+	return ctx.hasUI === true || !ctx.sessionManager.getHeader()?.parentSession;
 }
 
-export function shouldNotifyCompletion(ctx: SessionContext, mainSession: boolean): boolean {
-	return mainSession && ctx.isIdle() && !ctx.hasPendingMessages();
+export function shouldNotifyCompletion(ctx: SessionContext, mainSession: boolean, aborted = false): boolean {
+	return mainSession && !aborted && ctx.isIdle() && !ctx.hasPendingMessages();
 }
 
 export function formatProjectPath(cwd: string, home = homedir()): string {
@@ -245,6 +252,9 @@ function runScript(script: string, payload: NotificationPayload, timeoutMs: numb
 			if (error) reject(error);
 			else resolvePromise();
 		});
+		// A helper can fail or exit without reading stdin. Handle EPIPE on the
+		// stream itself: the execFile callback does not consume stream errors.
+		child.stdin?.on("error", reject);
 		child.stdin?.end(JSON.stringify(payload));
 	});
 }
@@ -262,6 +272,11 @@ function powershellToast(title: string, body: string): string {
 		`$xml.GetElementsByTagName('text')[0].AppendChild($xml.CreateTextNode('${escapePowerShell(body)}')) > $null`,
 		`[${type}.ToastNotificationManager]::CreateToastNotifier('${escapePowerShell(title)}').Show([${type}.ToastNotification]::new($xml))`,
 	].join("; ");
+}
+
+// OSC delimiters and C1 controls must never come from model text or paths.
+function sanitizeTerminalText(value: string): string {
+	return value.replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f]/g, "");
 }
 
 async function sendBackend(
@@ -286,12 +301,15 @@ async function sendBackend(
 			await run("powershell.exe", ["-NoProfile", "-Command", powershellToast(eventConfig.title, body)], timeoutMs);
 			return;
 		case "osc99":
-			write(`\x1b]99;i=1:d=0;${eventConfig.title}\x1b\\`);
-			write(`\x1b]99;i=1:p=body;${body}\x1b\\`);
+			write(`\x1b]99;i=1:d=0;${sanitizeTerminalText(eventConfig.title)}\x1b\\`);
+			write(`\x1b]99;i=1:p=body;${sanitizeTerminalText(body)}\x1b\\`);
 			return;
-		case "osc777":
-			write(`\x1b]777;notify;${eventConfig.title};${body}\x07`);
+		case "osc777": {
+			const title = sanitizeTerminalText(eventConfig.title).replaceAll(";", ",");
+			const text = sanitizeTerminalText(body).replaceAll(";", ",");
+			write(`\x1b]777;notify;${title};${text}\x07`);
 			return;
+		}
 	}
 }
 
@@ -324,7 +342,7 @@ function createPayload(
 }
 
 function eventBackendError(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
+	return sanitizeTerminalText(error instanceof Error ? error.message : String(error));
 }
 
 export function createNotifier(config: NotificationConfig, options: NotifierOptions = {}) {
@@ -384,20 +402,61 @@ export default function (pi: ExtensionAPI) {
 	let config = loadNotificationConfig(currentCwd);
 	let notify = createNotifier(config);
 	let pendingPrompt: AskPrompt | undefined;
+	let completionOutcome: "completed" | "aborted" | "error" = "completed";
+	let currentSessionId: string | undefined;
+	let subagentsAvailable = false;
+	let liveness: SessionLivenessMonitor | undefined;
+	let livenessWarning = false;
+
+	try {
+		liveness = installSessionLivenessMonitor();
+	} catch (error) {
+		console.warn(`Pi completion notification disabled: ${eventBackendError(error)}`);
+	}
+
+	pi.events.on("subagents:rpc:v1:ready", () => {
+		subagentsAvailable = true;
+	});
 
 	pi.on("session_start", (_event, ctx) => {
+		currentSessionId = ctx.sessionManager.getSessionId();
+		livenessWarning = false;
 		currentCwd = ctx.cwd;
 		mainSession = isMainSession(ctx);
 		config = loadNotificationConfig(ctx.cwd);
 		notify = createNotifier(config);
 		pendingPrompt = undefined;
+		completionOutcome = "completed";
+	});
+
+	pi.on("agent_start", () => {
+		completionOutcome = "completed";
+	});
+
+	// Unlike agent_settled.aborted, this outcome distinguishes provider errors.
+	// Retries and successful continuations update it before final settlement.
+	pi.on("agent_before_settle", (event) => {
+		completionOutcome = event.outcome;
 	});
 
 	// Keep the session classification from session_start. During subagent work,
 	// the settlement context can belong to the parent runner, while the child
 	// session itself must remain silent.
-	pi.on("agent_settled", (_event, ctx) => {
-		if (shouldNotifyCompletion(ctx, mainSession)) notify("agent_settled", config.done, config.done.message, ctx.cwd);
+	pi.on("agent_settled", (event, ctx) => {
+		if (!shouldNotifyCompletion(ctx, mainSession, event.aborted) || completionOutcome !== "completed"
+			|| !currentSessionId || !liveness) return;
+		try {
+			// Parent idle is not workflow idle. The provider also covers completed
+			// children whose result or wake has not yet reached the parent.
+			if (liveness.hasActiveWork(currentSessionId, subagentsAvailable)) return;
+		} catch (error) {
+			if (!livenessWarning) {
+				console.warn(`Pi completion notification suppressed: ${eventBackendError(error)}`);
+				livenessWarning = true;
+			}
+			return;
+		}
+		notify("agent_settled", config.done, config.done.message, currentCwd);
 	});
 
 	pi.events.on(ASK_USER_PROMPT_EVENT, (data) => {

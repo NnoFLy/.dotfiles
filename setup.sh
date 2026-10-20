@@ -1,12 +1,26 @@
 #!/usr/bin/env bash
 
-mkdir ~/apps/
+mkdir -p "$HOME/apps"
 
 setup_config() {
-    # stow for each config
+    local dotfiles="${DOTFILES:-$HOME/.dotfiles}"
+
+    command -v stow >/dev/null 2>&1 || {
+        echo "stow is required; run '$0 base' first or install it manually" >&2
+        return 1
+    }
+
+    if [[ ! -d "$dotfiles" ]]; then
+        echo "Dotfiles directory not found: $dotfiles" >&2
+        return 1
+    fi
+
+    cd -- "$dotfiles" || return 1
+    stow --no-folding --restow --target="$HOME" bashrc tmux pi codex
 }
 
 install_emacs() {
+    :
 }
 
 install_base() {
@@ -62,7 +76,10 @@ install_apps() {
     yay -S --needed --noconfirm zen-browser-bin happ t3code-bin
 }
 
-case "$1" in
+case "${1:-}" in
+    "config")
+        setup_config
+        ;;
     "base") echo 1
         install_base
         ;;
@@ -76,6 +93,7 @@ case "$1" in
         install_base
         setup_neovim
         install_apps
+        setup_config
         ;;
 esac
 

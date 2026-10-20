@@ -2,6 +2,7 @@
   "notify": {
     "enable": true,
     "backend": "auto",
+    "script": "~/.pi/agent/pi-lab/rootshell-push.py",
     "tmuxBell": true,
     "includeProject": true,
     "askUserDetail": "header",

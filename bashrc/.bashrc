@@ -139,3 +139,5 @@ if [ -d "$FNM_PATH" ]; then
   export PATH="$FNM_PATH:$PATH"
   eval "$(fnm env --shell bash)"
 fi
+
+export PATH="$HOME/.local/opt/herdr-rootshell/bin:$PATH" # rootshell-herdr

@@ -1,0 +1,85 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "local_shell|shell|shell_command|exec_command|Bash|Shell|apply_patch|Edit|Write|grep_files|ctx_execute|ctx_execute_file|ctx_batch_execute|ctx_fetch_and_index|ctx_search|ctx_index|mcp__",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/nnofly/.pi/agent/npm/node_modules/.bin/context-mode hook codex pretooluse"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/nnofly/.pi/agent/npm/node_modules/.bin/context-mode hook codex posttooluse"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "bash '/home/nnofly/.codex/herdr-agent-state.sh' session",
+            "timeout": 10,
+            "type": "command"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/nnofly/.pi/agent/npm/node_modules/.bin/context-mode hook codex sessionstart"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/nnofly/.pi/agent/npm/node_modules/.bin/context-mode hook codex precompact"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/nnofly/.pi/agent/npm/node_modules/.bin/context-mode hook codex userpromptsubmit"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "_rootshell": "push",
+            "async": true,
+            "command": "rootshell-notify hook --agent codex",
+            "timeout": 10,
+            "type": "command"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/nnofly/.pi/agent/npm/node_modules/.bin/context-mode hook codex stop"
+          }
+        ]
+      }
+    ]
+  }
+}
