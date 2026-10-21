@@ -1,0 +1,63 @@
+# Pi Emacs editor
+
+The extension in `.pi/agent/extensions/emacs-eat-editor.ts` adds Emacs-style editing to Pi. Keep the `extensions/emacs-eat/` helper directory alongside the entry point, including in symlink-based installations. An existing entry-point symlink does not install newly added sibling files automatically. Run `/reload` after linking the files and updating `keybindings.json`.
+
+## Keys
+
+`C-` means Control; `M-` means Alt/Meta. For a `C-x` sequence, release Control before pressing the second key. Escape or `C-g` cancels a prefix; it also expires after 1.5 seconds.
+
+| Keys                                | Action                                                   |
+| ----------------------------------- | -------------------------------------------------------- |
+| `C-/`, `C-_`, `C--`, `C-x u`        | Undo                                                     |
+| `C-?`, `C-x r`                      | Redo on the selected branch                              |
+| `C-x [`, `C-x ]`                    | Chronologically older/newer change, across branches      |
+| `C-M-b`, `C-M-f`                    | Beginning/end of a whitespace-delimited WORD             |
+| `C-M-Backspace`, `C-M-d`            | Kill backward/forward WORD                               |
+| `C-Backspace`, `M-Backspace`, `C-w` | Kill the previous small word                             |
+| `C-y`                               | Yank the latest kill-ring entry                          |
+| `M-y`                               | Replace the preceding yank with the next kill-ring entry |
+| `M-b`, `M-f`                        | Pi's existing small-word movement                        |
+| `C-p`, `C-n`                        | Move through editor text, not prompt history             |
+| `M-p`, `M-n`                        | Browse prompt history and restore saved undo trees       |
+| `C-x m`, `C-x t`, `C-x s`, `C-x h`  | Model, thinking level, session tree, Pi hotkeys          |
+
+A WORD is a non-whitespace run: `foo/bar-baz` is one WORD. WORD movement and killing cross line breaks. A collapsed paste label is indivisible. These `C-M-` bindings are WORD operations, not Emacs balanced-expression operations.
+
+Undo history branches when you undo and type something different. Ordinary redo follows the selected branch; the chronological shortcuts recover the other branches, like Vim's `g-` and `g+`. Typing keeps Pi's existing word-sized undo groups. Pasting, killing, yanking, and each yank-pop are separate undo units. Cursor movement and history restoration invalidate yank-pop. The kill ring does not use the system clipboard, and is not saved across restarts.
+
+Punctuation and combined-modifier shortcuts depend on terminal support. Use `C-x u/r` if undo/redo punctuation is unavailable. Legacy `C-?` can be indistinguishable from Backspace, so ordinary Backspace is never interpreted as redo. `C-M-Backspace` requires explicit Kitty/CSI-u or modifyOtherKeys reporting; ambiguous legacy Meta-Backspace sequences keep their existing small-word behavior. Russian physical-key aliases remain supported for letter commands and prefixes.
+
+## Persistent history
+
+Each submitted prompt has a separate undo tree. Recalling a prompt copies its tree into the draft; editing it does not modify the submitted prompt's archive. Submission starts a fresh draft tree. The current draft and its branches are restored when the same Pi session resumes. Live editor text takes priority if it differs from the saved draft.
+
+`M-p/M-n` keep the full prompt history for the current Pi session, including its conversation branches, without Pi's native 100-prompt cap. Reload/resume restores the list from the archive index and the original session log, not the compacted model context. Prompts that predate the extension can be recovered as text, but cannot acquire undo branches that were never saved. Only consecutive identical prompts are collapsed. Built-in commands are archived but do not participate in recall ordering unless Pi adds them to prompt history. Other sessions remain separate.
+
+Raw inputs and their undo trees keep their own stable submission IDs. Delivery checkpoints separately record the actual session-entry IDs, so a template, skill, or input transformation does not become an extra recalled prompt when Pi persists expanded text. Recovery imports only session entries not already represented by the captured-input history.
+
+Older indexes lack delivery identity. Their text and archive files are retained, but text matching alone never authorizes restoring an old tree onto a recovered occurrence. Unmatched legacy inputs may remain separately visible rather than being guessed or discarded.
+
+Archives live under `~/.pi/agent/emacs-undo/<hashed-session-id>/`, or under the configured Pi agent directory. They contain **plaintext deleted text**, including secrets removed before submission. Directories use mode `0700`; files use `0600`. Nothing is added to the model's context or the dotfiles repository.
+
+Draft saves are debounced by 300 ms. Submission and normal shutdown/reload flush pending writes. Abrupt termination can lose unsaved edits. Writes use private temporary files and atomic replacement; archive reads reject symlinks and invalid data. A second live editor for the same session falls back to in-memory history rather than overwrite the first editor's files. Storage errors warn without blocking editing. Files larger than 64 MiB are refused without pruning existing history.
+
+There is no automatic expiry. Run `/emacs-undo-clear` and confirm to delete the current session's saved trees and reset its in-memory undo history, keeping visible text and submitted-prompt recall. This does not erase the kill ring, Pi's conversation transcript, backups, or filesystem snapshots. If storage is unavailable, close Pi and remove that session's archive directory manually. Only trusted local processes running as your account (or privileged processes) should access these files.
+
+The compatibility adapter uses private Pi editor methods. After a Pi upgrade, run the tests below. If the required methods change, the extension disables itself and warns instead of installing a partial adapter.
+
+## Tests
+
+From the dotfiles repository root, with Node 24 or another Node release supporting TypeScript stripping:
+
+```sh
+node --test pi/tests/*.test.ts pi/tests/*.test.mjs
+```
+
+To also test the deployed extension path and its helper links:
+
+```sh
+PI_TEST_EXTENSION="$HOME/.pi/agent/extensions/emacs-eat-editor.ts" \
+  node --test pi/tests/*.test.ts pi/tests/*.test.mjs
+```
+
+The integration tests load the real installed Pi editor through Pi's bundled `jiti`. They use the managed installation's `current-version` file by default. For a different installation, set `PI_TEST_NODE_MODULES` to its `node_modules` directory. Persistence tests use temporary directories, not your real prompt archives.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { test, type TestContext } from "node:test";
@@ -116,7 +116,7 @@ test("unsupported or replaced registries and broken providers cannot report comp
 	assert.throws(() => monitor.hasActiveWork("parent", true), /registry changed/);
 });
 
-function fixture(t: TestContext, options: { child?: boolean; unsupportedRegistry?: boolean } = {}) {
+function fixture(t: TestContext, options: { child?: boolean; unsupportedRegistry?: boolean; diagnostics?: boolean } = {}) {
 	const host: Host = globalThis;
 	const savedRegistry = host[REGISTRY_KEY];
 	const savedMonitor = host[MONITOR_KEY];
@@ -132,7 +132,7 @@ function fixture(t: TestContext, options: { child?: boolean; unsupportedRegistry
 	process.chdir(home);
 	mkdirSync(join(home, ".pi", "agent", "pi-lab"), { recursive: true });
 	writeFileSync(join(home, ".pi", "agent", "pi-lab", "notify.json"), JSON.stringify({ notify: {
-		backend: "osc777", tmuxBell: false, includeProject: false, dedupeMs: 0,
+		backend: "osc777", diagnostics: options.diagnostics ?? false, tmuxBell: false, includeProject: false, dedupeMs: 0,
 	} }));
 
 	const notifications: string[] = [];
@@ -311,4 +311,41 @@ test("error and aborted outcomes stay silent; a successful retry can complete", 
 	f.emit("agent_before_settle", { outcome: "completed" });
 	f.emit("agent_settled", { aborted: false });
 	assert.equal(f.notifications.length, 3, "a later successful run is not silenced by an old failure");
+});
+
+test("opt-in diagnostics correlate completion gates and real dispatch attempts without prompt text", t => {
+	const f = fixture(t, { diagnostics: true });
+	const path = join(f.ctx.cwd, ".local", "state", "pi-notify", "notification-events.jsonl");
+	const rows = () => readFileSync(path, "utf8").trim().split("\n").map(line => JSON.parse(line));
+	assert.equal(rows()[0].reason, "loaded");
+	let active = true;
+	registry(f.host).register({ name: "pi-subagents", sessionId: "parent", isActive: () => active });
+	f.bus.emit("subagents:rpc:v1:ready", {});
+	f.emit("agent_start");
+	f.emit("agent_settled", { aborted: false });
+	assert.equal(rows().at(-1).reason, "outstanding-work");
+	assert.equal(rows().at(-1).outstandingWork, true);
+	assert.equal(rows().filter(row => row.phase === "dispatch").length, 0);
+	active = false;
+	f.emit("agent_settled", { aborted: false });
+	assert.equal(rows().at(-2).reason, "clear");
+	assert.equal(rows().at(-1).phase, "dispatch");
+	f.bus.emit("rpiv:ask-user:prompt", { questions: [{ header: "PRIVATE QUESTION" }] });
+	f.bus.emit("rpiv:ask-user:blocked", { active: true });
+	assert.equal(rows().filter(row => row.phase === "dispatch").length, 2);
+	assert.ok(rows().every(row => row.pid === process.pid && row.sessionId === "parent"));
+	assert.equal(readFileSync(path, "utf8").includes("PRIVATE QUESTION"), false);
+	assert.equal(readFileSync(path, "utf8").includes(f.ctx.cwd), false);
+});
+
+test("diagnostic I/O failures do not suppress notifications or leak errors", t => {
+	const f = fixture(t, { diagnostics: true });
+	const path = join(f.ctx.cwd, ".local", "state", "pi-notify", "notification-events.jsonl");
+	rmSync(path);
+	mkdirSync(path);
+	f.emit("agent_settled", { aborted: false });
+	assert.equal(f.notifications.length, 1);
+	assert.equal(f.warnings.length, 1);
+	assert.match(String(f.warnings[0][0]), /diagnostics unavailable/);
+	assert.equal(String(f.warnings[0][0]).includes(f.ctx.cwd), false);
 });

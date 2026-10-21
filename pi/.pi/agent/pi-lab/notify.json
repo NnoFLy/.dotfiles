@@ -1,6 +1,7 @@
 {
   "notify": {
     "enable": true,
+    "diagnostics": true,
     "backend": "auto",
     "script": "~/.pi/agent/pi-lab/rootshell-push.py",
     "tmuxBell": true,

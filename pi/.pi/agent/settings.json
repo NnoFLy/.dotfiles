@@ -6,6 +6,19 @@
   "enableInstallTelemetry": false,
   "externalEditor": "emacsclient --reuse-frame --alternate-editor=emacs",
   "defaultProvider": "openai-codex",
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 50000,
+    "keepRecentTokens": 20000,
+    "modelOverrides": {
+      "openai-codex/gpt-6.1-sol": {
+        "reserveTokens": 350000
+      },
+      "openai-codex/gpt-6-astra": {
+        "reserveTokens": 150000
+      }
+    }
+  },
   "packages": [
     "npm:pi-web-access",
     "npm:pi-simplify",

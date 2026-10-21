@@ -141,15 +141,16 @@ test("merges global and project notification configuration", async () => {
 		await mkdir(join(root, "project", ".pi", "pi-lab"), { recursive: true });
 		await writeFile(
 			join(root, ".pi", "agent", "pi-lab", "notify.json"),
-			JSON.stringify({ notify: { backend: "osc777", script: "./global-hook", timeoutMs: 9000, done: { message: "Done" } } }),
+			JSON.stringify({ notify: { backend: "osc777", diagnostics: true, script: "./global-hook", timeoutMs: 9000, done: { message: "Done" } } }),
 		);
 		await writeFile(
 			join(root, "project", ".pi", "pi-lab", "notify.json"),
-			JSON.stringify({ notify: { script: "./repo-hook", askUserDetail: "question", done: { icon: "bell" } } }),
+			JSON.stringify({ notify: { script: "./repo-hook", diagnostics: false, askUserDetail: "question", done: { icon: "bell" } } }),
 		);
 
 		const config = loadNotificationConfig(join(root, "project"), root);
 		assert.equal(config.backend, "osc777");
+		assert.equal(config.diagnostics, true, "diagnostic logging is controlled by the global user config");
 		assert.equal(config.timeoutMs, 9000);
 		assert.equal(config.askUserDetail, "question");
 		assert.equal(config.done.message, "Done");
@@ -167,10 +168,11 @@ test("project-only scripts are ignored, including when notifications are disable
 		const cwd = join(root, "repo");
 		await mkdir(join(cwd, ".pi", "pi-lab"), { recursive: true });
 		await writeFile(join(cwd, ".pi", "pi-lab", "notify.json"), JSON.stringify({
-			notify: { enable: false, script: "./repo-owned-script", done: { message: "Local appearance" } },
+			notify: { enable: false, diagnostics: true, script: "./repo-owned-script", done: { message: "Local appearance" } },
 		}));
 		const config = loadNotificationConfig(cwd, join(root, "clean-home"));
 		assert.equal(config.script, undefined);
+		assert.equal(config.diagnostics, false, "a repository cannot opt the user into diagnostic logging");
 		assert.equal(config.done.message, "Local appearance");
 		let executions = 0;
 		createNotifier(config, { runScript: async () => { executions++; } })(

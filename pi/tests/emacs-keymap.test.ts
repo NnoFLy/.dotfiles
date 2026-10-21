@@ -72,7 +72,7 @@ test("declares the Emacs aliases in Pi's keybinding registry", async () => {
 	assert.deepEqual(keybindings["tui.editor.cursorWordRight"], ["alt+right", "ctrl+right", "alt+f"]);
 	assert.deepEqual(keybindings["tui.editor.cursorLineStart"], ["home", "ctrl+a"]);
 	assert.deepEqual(keybindings["tui.editor.cursorLineEnd"], ["end", "ctrl+e"]);
-	assert.deepEqual(keybindings["tui.editor.deleteWordBackward"], ["ctrl+w", "alt+backspace"]);
+	assert.deepEqual(keybindings["tui.editor.deleteWordBackward"], ["ctrl+w", "alt+backspace", "ctrl+backspace"]);
 	assert.deepEqual(keybindings["tui.editor.deleteWordForward"], ["alt+d", "alt+delete"]);
 	assert.deepEqual(keybindings["tui.editor.deleteToLineStart"], ["ctrl+u"]);
 	assert.deepEqual(keybindings["tui.editor.deleteToLineEnd"], ["ctrl+k"]);

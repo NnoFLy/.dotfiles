@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { installSessionLivenessMonitor, type SessionLivenessMonitor } from "../pi-lab/notification-liveness.ts";
+import { createNotificationDiagnostics, type NotificationDiagnostic } from "../pi-lab/notification-diagnostics.ts";
 
 const ASK_USER_PROMPT_EVENT = "rpiv:ask-user:prompt";
 const ASK_USER_BLOCKED_EVENT = "rpiv:ask-user:blocked";
@@ -23,6 +24,7 @@ type EventConfig = {
 
 export type NotificationConfig = {
 	enable: boolean;
+	diagnostics: boolean;
 	backend: NotificationBackend;
 	tmuxBell: boolean;
 	includeProject: boolean;
@@ -71,10 +73,12 @@ type NotifierOptions = {
 	runCommand?: (command: string, args: string[], timeoutMs: number) => Promise<void>;
 	runScript?: (script: string, payload: NotificationPayload, timeoutMs: number) => Promise<void>;
 	write?: (text: string) => void;
+	diagnostics?: (entry: NotificationDiagnostic) => void;
 };
 
 const DEFAULT_CONFIG: NotificationConfig = {
 	enable: true,
+	diagnostics: false,
 	backend: "auto",
 	tmuxBell: true,
 	includeProject: true,
@@ -168,6 +172,8 @@ export function loadNotificationConfig(cwd: string, home = homedir()): Notificat
 
 	return {
 		enable: asBoolean(raw.enable, DEFAULT_CONFIG.enable),
+		// Repositories cannot opt the user into persistent diagnostic logging.
+		diagnostics: asBoolean(globalConfig.diagnostics, DEFAULT_CONFIG.diagnostics),
 		backend: asBackend(raw.backend, DEFAULT_CONFIG.backend),
 		tmuxBell: asBoolean(raw.tmuxBell, DEFAULT_CONFIG.tmuxBell),
 		includeProject: asBoolean(raw.includeProject, DEFAULT_CONFIG.includeProject),
@@ -353,18 +359,27 @@ export function createNotifier(config: NotificationConfig, options: NotifierOpti
 	const runScriptFn = options.runScript ?? runScript;
 	const write = options.write ?? ((text: string) => process.stdout.write(text));
 	const recent = new Map<string, number>();
+	const diagnose = options.diagnostics ?? (() => {});
 
 	return (event: NotifyEvent, eventConfig: EventConfig, message: string, cwd: string): void => {
-		if (!eventConfig.enabled || (!config.enable && !config.script)) return;
+		if (!eventConfig.enabled || (!config.enable && !config.script)) {
+			diagnose({ event, phase: "suppressed", reason: "disabled" });
+			return;
+		}
 		const now = nowFn();
 		const key = `${event}:${cwd}:${message}`;
 		const previous = recent.get(key);
-		if (previous !== undefined && now - previous < config.dedupeMs) return;
+		if (previous !== undefined && now - previous < config.dedupeMs) {
+			diagnose({ event, phase: "suppressed", reason: "deduped" });
+			return;
+		}
 		recent.set(key, now);
 
 		const payload = createPayload(event, eventConfig, message, cwd, env, now);
 		const body = config.includeProject ? `${message}\n${formatProjectPath(cwd)}` : message;
 		const requestedBackend = resolveBackend(config.backend, env, platform);
+		diagnose({ event, phase: "dispatch", notificationId: payload.notificationId, backend: requestedBackend,
+			desktopEnabled: config.enable && requestedBackend !== "none", scriptEnabled: Boolean(config.script) });
 
 		void (async () => {
 			if (config.enable) {
@@ -400,10 +415,12 @@ export default function (pi: ExtensionAPI) {
 	let mainSession = false;
 	let currentCwd = process.cwd();
 	let config = loadNotificationConfig(currentCwd);
-	let notify = createNotifier(config);
+	let currentSessionId: string | undefined;
+	let diagnostics = createNotificationDiagnostics(config.diagnostics);
+	const captureDiagnostic = (entry: NotificationDiagnostic) => diagnostics({ ...entry, sessionId: currentSessionId });
+	let notify = createNotifier(config, { diagnostics: captureDiagnostic });
 	let pendingPrompt: AskPrompt | undefined;
 	let completionOutcome: "completed" | "aborted" | "error" = "completed";
-	let currentSessionId: string | undefined;
 	let subagentsAvailable = false;
 	let liveness: SessionLivenessMonitor | undefined;
 	let livenessWarning = false;
@@ -416,6 +433,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.events.on("subagents:rpc:v1:ready", () => {
 		subagentsAvailable = true;
+		captureDiagnostic({ event: "subagents_ready", phase: "lifecycle", reason: "ready" });
 	});
 
 	pi.on("session_start", (_event, ctx) => {
@@ -424,13 +442,18 @@ export default function (pi: ExtensionAPI) {
 		currentCwd = ctx.cwd;
 		mainSession = isMainSession(ctx);
 		config = loadNotificationConfig(ctx.cwd);
-		notify = createNotifier(config);
+		diagnostics = createNotificationDiagnostics(config.diagnostics);
+		notify = createNotifier(config, { diagnostics: captureDiagnostic });
 		pendingPrompt = undefined;
 		completionOutcome = "completed";
+		captureDiagnostic({ event: "session_start", phase: "lifecycle", reason: "loaded", mainSession,
+			subagentsAvailable, backend: config.backend, desktopEnabled: config.enable && config.done.enabled,
+			scriptEnabled: Boolean(config.script) && config.done.enabled });
 	});
 
 	pi.on("agent_start", () => {
 		completionOutcome = "completed";
+		captureDiagnostic({ event: "agent_start", phase: "lifecycle", reason: "started", mainSession });
 	});
 
 	// Unlike agent_settled.aborted, this outcome distinguishes provider errors.
@@ -443,13 +466,23 @@ export default function (pi: ExtensionAPI) {
 	// the settlement context can belong to the parent runner, while the child
 	// session itself must remain silent.
 	pi.on("agent_settled", (event, ctx) => {
+		const state = { event: "agent_settled" as const, mainSession, idle: ctx.isIdle(),
+			pendingMessages: ctx.hasPendingMessages(), aborted: event.aborted, outcome: completionOutcome, subagentsAvailable };
 		if (!shouldNotifyCompletion(ctx, mainSession, event.aborted) || completionOutcome !== "completed"
-			|| !currentSessionId || !liveness) return;
+			|| !currentSessionId || !liveness) {
+			const reason = !mainSession ? "not-main" : event.aborted ? "aborted" : !state.idle ? "busy"
+				: state.pendingMessages ? "pending-messages" : completionOutcome !== "completed" ? "outcome" : "missing-liveness";
+			captureDiagnostic({ ...state, phase: "suppressed", reason });
+			return;
+		}
 		try {
 			// Parent idle is not workflow idle. The provider also covers completed
 			// children whose result or wake has not yet reached the parent.
-			if (liveness.hasActiveWork(currentSessionId, subagentsAvailable)) return;
+			const outstandingWork = liveness.hasActiveWork(currentSessionId, subagentsAvailable);
+			captureDiagnostic({ ...state, phase: "gate", reason: outstandingWork ? "outstanding-work" : "clear", outstandingWork });
+			if (outstandingWork) return;
 		} catch (error) {
+			captureDiagnostic({ ...state, phase: "suppressed", reason: "liveness-error" });
 			if (!livenessWarning) {
 				console.warn(`Pi completion notification suppressed: ${eventBackendError(error)}`);
 				livenessWarning = true;
@@ -464,7 +497,10 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.events.on(ASK_USER_BLOCKED_EVENT, (data) => {
-		if (!mainSession || !isRecord(data)) return;
+		if (!isRecord(data)) return;
+		if (data.active === true) captureDiagnostic({ event: "ask_user_blocked", phase: "gate", mainSession,
+			reason: mainSession ? "clear" : "not-main" });
+		if (!mainSession) return;
 		if (data.active === true) {
 			const message = formatAskUserMessage(config.askUser.message, pendingPrompt, config.askUserDetail);
 			notify("ask_user_blocked", config.askUser, message, currentCwd);
