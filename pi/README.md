@@ -5,9 +5,10 @@
 Run `./setup.sh config` from the dotfiles root to install these resources with the existing GNU Stow `pi` package:
 
 - `pi/.agents/skills/git-worktree/SKILL.md` → `~/.agents/skills/git-worktree/SKILL.md`
+- `pi/.agents/skills/implement-spec/` → `~/.agents/skills/implement-spec/`
 - `pi/.pi/agent/agents/lead.md` → `~/.pi/agent/agents/lead.md`
 
-Pi discovers the skill in `~/.agents/skills/`; the configured `pi-subagents` package discovers the user-level `lead` agent. Reload Pi after installation. Neither resource depends on a specific username or checkout path.
+Pi discovers skills in `~/.agents/skills/`; the configured `pi-subagents` package discovers the user-level `lead` agent. Reload Pi after installation. Neither resource depends on a specific username or checkout path.
 
 Use a task worktree for feature implementation or substantial code changes, as well as explicit worktree requests and established worktree tasks. Small localized fixes, routine maintenance, and documentation-only changes stay in the current checkout unless a worktree is explicitly requested or already assigned. A standalone request to commit or push without worktree context must not load it, create a worktree, or prompt for Local merge / Create PR. Once a worktree task is active, every delegated assignment must carry the verified absolute skill path and require the child to read it before acting. Fresh workers do not automatically inherit global instructions or skill discovery.
 
@@ -15,7 +16,7 @@ Use `lead` only for explicitly authorized nested coordination. Its assignment mu
 
 Worktree checks require a separately installed, compatible upstream `heavy` executable supporting `--dir`, `--pool`, `--slots`, `--no-skip-ci`, and `--on-timeout fail`. Setup does not install it. The skill requires stopping heavy checks if it is missing; never bypass the queue. Resolve the queue under the operator's home once and pass the same absolute path to children.
 
-Existing regular files at either destination will conflict with Stow. Compare and back them up, then move them aside only with the owner's approval before rerunning setup. Do not use `stow --adopt` or overwrite them automatically. This also applies to the previously hand-installed copies of these resources.
+Existing regular files at these destinations will conflict with Stow. Compare and back them up, then move them aside only with the owner's approval before rerunning setup. Do not use `stow --adopt` or overwrite them automatically. This also applies to the previously hand-installed copies of these resources.
 
 To test fresh installation, repeated setup, conflict preservation, and the policy's activation/handoff wording without touching your real home:
 
@@ -24,6 +25,24 @@ node --test pi/tests/worktree-workflow.test.mjs
 ```
 
 These tests check deployment and policy text, not a model's compliance or a live nested run.
+
+## Implement a root spec
+
+The explicit-only `implement-spec` skill runs a root spec's dependency graph through Main → lead → scout/worker/reviewer, without requiring a separate kickoff for each ticket. It uses one task branch/worktree, sequential writers, independent reviews, and checkpoints outside the repository. It does not create an unattended background service.
+
+After installation and `/reload`, invoke it from the verified repository:
+
+```text
+/skill:implement-spec https://github.com/NnoFLy/project-reader/issues/54
+```
+
+Use any supported root issue URL, or a number such as `#54` once its repository is verified. Invocation starts preflight and bounded implementation; commits, dependency installation, and child-ticket updates need explicit permission. Grant the required permissions once at kickoff to let ordinary accepted tickets advance automatically. Main retains final acceptance and tracker/publication actions. Without commit authority, the workflow stops at the first accepted uncommitted ticket rather than mix ticket changes.
+
+Reinvoke with the same root to reconcile the checkpoint, actual Git state, native runs, and tracker receipts before resuming. Live/uncertain writers, unavailable device evidence, and failed feasibility or security gates remain blockers. The workflow never resets a dirty checkout or treats tracker closure alone as implementation evidence.
+
+At the end it asks Local merge or Create PR; neither implementation permission nor integration approval authorizes cleanup or parent closure. The skill's [checkpoint reference](.agents/skills/implement-spec/references/checkpoint.md) describes state ownership and recovery.
+
+This adapts [Matt Pocock's implement-spec](https://github.com/mattpocock/skills/tree/main/skills/engineering/implement-spec) to the local Pi/worktree policy. Creating or installing the skill does not execute the example issue.
 
 ## Manual commit and push
 
