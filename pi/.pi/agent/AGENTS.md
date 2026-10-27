@@ -59,6 +59,7 @@ heavy --dir "$HOME/.local/state/heavy" --pool checks --slots 1 \
 - Keep comments up to date when making changes.
 - Use Conventional Commits when the user asks you to create a commit.
 - After code changes, run relevant tests and available lint, type, and formatting checks. Before committing, run the repository's required checks. Report what passed, failed, or was not run, and why. Keep formatting scoped to the task.
+- Exception: explicitly invoked `/skill:commit` and `/skill:push` skip agent-run tests, lint, formatting, builds, and other validation; Git inspection and a brief diff review still apply. This includes `push` reusing `commit`. Keep Git hooks enabled and stop on failure. This exception does not override independent repository requirements; surface any conflict and ask. Do not claim prior checks passed without evidence.
 
 ## Coding preferences - TypeScript
 

@@ -25,6 +25,19 @@ node --test pi/tests/worktree-workflow.test.mjs
 
 These tests check deployment and policy text, not a model's compliance or a live nested run.
 
+## Manual commit and push
+
+The `commit` and `push` skills live in `.agents/skills/` in this Stow package and install under `~/.agents/skills/`. Both disable automatic model invocation. After installation and `/reload`, use:
+
+```text
+/skill:commit
+/skill:push
+```
+
+`commit` reviews staged changes, or clearly identified task changes when nothing is staged, and creates focused Conventional Commits. It can split clearly separable changes without modifying file contents. `push` reads and follows the sibling `commit` skill, then fetches the configured upstream, reviews all outgoing commits, and pushes only the current branch.
+
+Neither workflow runs agent-initiated tests or checks, launches subagents, or creates a worktree. Git hooks remain enabled and may run checks. Review concerns, ambiguous scope, hook failures, missing upstreams, and behind/divergent branches stop the workflow. Neither skill forces a push or rewrites history. The global checks exception applies only to these explicit invocations, not independent repository requirements.
+
 ## Emacs editor
 
 The extension in `.pi/agent/extensions/emacs-eat-editor.ts` adds Emacs-style editing to Pi. Keep the `extensions/emacs-eat/` helper directory alongside the entry point, including in symlink-based installations. An existing entry-point symlink does not install newly added sibling files automatically. Run `/reload` after linking the files and updating `keybindings.json`.
