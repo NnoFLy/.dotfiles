@@ -81,15 +81,3 @@ After ticket acceptance, run a fresh independent review of the complete task dif
 Return the branch/worktree, accepted and blocked tickets, evidence/check summary, unresolved risks, run references, and checkpoint path. For security-sensitive work, state the trust boundary and applied protections.
 
 Only when proposing integration, follow the worktree skill and ask **Local merge** or **Create PR**, with no assumed default. Earlier implementation or tracker permissions do not authorize either. Main alone performs the approved integration/publication. No automatic draft PR, push, rebase, squash, parent closure, worktree removal, or branch deletion. Cleanup needs separate authorization.
-
-## Example
-
-From the verified repository, after reloading Pi:
-
-```text
-/skill:implement-spec https://github.com/NnoFLy/project-reader/issues/54
-```
-
-A number such as `#54` is also valid once its repository is verified. Reinvoke with the same root to reconcile and resume; do not create a second task tree blindly.
-
-Workflow reference: [Matt Pocock's implement-spec](https://github.com/mattpocock/skills/tree/main/skills/engineering/implement-spec). This version keeps the dependency-frontier approach but uses one task worktree, bounded nested delegation, durable checkpoints, and explicit integration/cleanup approval instead of per-ticket worktrees and automatic publication/cleanup.
