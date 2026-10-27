@@ -1,4 +1,31 @@
-# Pi Emacs editor
+# Pi configuration
+
+## Worktree workflow
+
+Run `./setup.sh config` from the dotfiles root to install these resources with the existing GNU Stow `pi` package:
+
+- `pi/.agents/skills/git-worktree/SKILL.md` → `~/.agents/skills/git-worktree/SKILL.md`
+- `pi/.pi/agent/agents/lead.md` → `~/.pi/agent/agents/lead.md`
+
+Pi discovers the skill in `~/.agents/skills/`; the configured `pi-subagents` package discovers the user-level `lead` agent. Reload Pi after installation. Neither resource depends on a specific username or checkout path.
+
+The skill applies only to explicit worktree requests or an established worktree task. A standalone request to commit or push without worktree context must not load it, create a worktree, or prompt for Local merge / Create PR. Once a worktree task is active, every delegated assignment must carry the verified absolute skill path and require the child to read it before acting. Fresh workers do not automatically inherit global instructions or skill discovery.
+
+Use `lead` only for explicitly authorized nested coordination. Its assignment must authorize scout, worker, and reviewer children, bound their scope and worktree ownership, and prohibit further delegation. Main keeps final acceptance and publication authority. The agent's availability alone does not authorize spawning it or its children.
+
+Worktree checks require a separately installed, compatible upstream `heavy` executable supporting `--dir`, `--pool`, `--slots`, `--no-skip-ci`, and `--on-timeout fail`. Setup does not install it. The skill requires stopping heavy checks if it is missing; never bypass the queue. Resolve the queue under the operator's home once and pass the same absolute path to children.
+
+Existing regular files at either destination will conflict with Stow. Compare and back them up, then move them aside only with the owner's approval before rerunning setup. Do not use `stow --adopt` or overwrite them automatically. This also applies to the previously hand-installed copies of these resources.
+
+To test fresh installation, repeated setup, conflict preservation, and the policy's activation/handoff wording without touching your real home:
+
+```sh
+node --test pi/tests/worktree-workflow.test.mjs
+```
+
+These tests check deployment and policy text, not a model's compliance or a live nested run.
+
+## Emacs editor
 
 The extension in `.pi/agent/extensions/emacs-eat-editor.ts` adds Emacs-style editing to Pi. Keep the `extensions/emacs-eat/` helper directory alongside the entry point, including in symlink-based installations. An existing entry-point symlink does not install newly added sibling files automatically. Run `/reload` after linking the files and updating `keybindings.json`.
 

@@ -31,6 +31,12 @@ For large or complex tasks, act as a **Tech Lead**. Preserve the main agent's co
 
 **Goal:** Keep the main agent's context small, relevant, and focused on decisions rather than execution history.
 
+## Worktree tasks
+
+Load `~/.agents/skills/git-worktree/SKILL.md` only for an explicit request to create, use, inspect, integrate, or clean up a Git worktree, or when continuing an established worktree task. Expand `~` to the operator's home directory before using file tools. Ordinary Git work, including standalone commit or push requests without worktree context, does not activate this skill or require creating a worktree.
+
+For an active worktree task, follow the skill's ownership, isolation, integration, and cleanup rules. Before delegating any part of that task, require the child to read the verified absolute skill path before acting, and pass the worktree context and applicable constraints explicitly. Apply this at every delegation level; fresh children may not inherit global instructions or skill discovery. If the skill is unavailable, stop the worktree operation and report the missing prerequisite.
+
 ## Coding preferences - general
 
 - Write readable code. Follow the best code quality principles.
