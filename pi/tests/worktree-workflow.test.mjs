@@ -70,22 +70,27 @@ for (const resource of resources.slice(0, 2)) {
 	});
 }
 
-test("policy limits activation to worktree context and explicitly forwards it to children", () => {
+test("policy scopes worktree defaults to substantial work and forwards context to children", () => {
 	const [skill, lead, instructions] = resources.map(resource =>
 		readFileSync(join(repository, "pi", resource), "utf8"),
 	);
 	const description = skill.match(/^description: (.+)$/m)?.[1];
 	assert.ok(description, "Skill discovery needs a description");
-	assert.match(description, /Use only for explicit Git worktree requests or continuing an established worktree task/);
-	assert.match(description, /Do not use for ordinary Git operations/);
+	assert.match(description, /Use for feature implementation, substantial code changes, explicit Git worktree requests/);
+	assert.match(description, /Small localized fixes, routine maintenance, documentation-only changes, and standalone commit or push requests do not activate this skill without worktree context/);
+	for (const policy of [skill, instructions]) {
+		assert.match(policy, /feature implementation or substantial code changes/);
+		assert.match(policy, /Small, localized fixes, routine maintenance, and documentation-only changes stay in the current checkout unless a worktree is explicitly requested or already assigned/);
+		assert.match(policy, /standalone commit or push requests(?: do not activate this skill)? without worktree context/i);
+	}
 	for (const policy of [skill, lead, instructions]) {
-		assert.match(policy, /standalone commit or push requests without worktree context/);
 		assert.doesNotMatch(policy, /\/home\/nnofly\//);
 	}
+	assert.match(lead, /Ordinary Git work[^\n]*without worktree context[^\n]*does not activate/);
 	assert.match(instructions, /require the child to read the verified absolute skill path before acting/);
 	assert.match(skill, /require the child to read it before acting/);
 	assert.match(skill, /Each coordinating child must repeat this handoff/);
-	assert.match(lead, /require every child to read that same path before acting/);
+	assert.match(lead, /require every child to read (?:that same path|the same file) before acting/i);
 	assert.match(skill, /Ask Local merge \/ Create PR only when proposing integration/);
 	assert.match(skill, /child with an overridden `HOME` must not derive a different queue/);
 	assert.match(skill, /explicit `worktree: false`/);

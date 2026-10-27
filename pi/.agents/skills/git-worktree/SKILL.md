@@ -1,13 +1,15 @@
 ---
 name: git-worktree
-description: Use only for explicit Git worktree requests or continuing an established worktree task, including its checks, integration, and cleanup. Do not use for ordinary Git operations, including standalone commit or push requests without worktree context.
+description: Use for feature implementation, substantial code changes, explicit Git worktree requests, or continuing an established worktree task, including its checks, integration, and cleanup. Small localized fixes, routine maintenance, documentation-only changes, and standalone commit or push requests do not activate this skill without worktree context.
 ---
 
 # Git task worktrees
 
 ## Activation boundary
 
-Load this skill only when the user explicitly asks to create, use, inspect, integrate, or clean up a worktree, or when the current assignment continues an established worktree task. An assigned linked task worktree is worktree context; merely being in a Git repository, having a branch, or having unrelated worktrees is not.
+Load this skill for feature implementation or substantial code changes, such as cross-cutting refactors or migrations; these tasks use a task worktree by default. Also load it when the user explicitly asks to create, use, inspect, integrate, or clean up a worktree, or when the current assignment continues an established worktree task. Small, localized fixes, routine maintenance, and documentation-only changes stay in the current checkout unless a worktree is explicitly requested or already assigned. If the scope is unclear, clarify before creating a worktree.
+
+An assigned linked task worktree is worktree context; merely being in a Git repository, having a branch, or having unrelated worktrees is not.
 
 Standalone requests such as "commit these changes" or "push this branch" without worktree context do not activate this skill. Do not create a worktree or ask for an integration choice just to satisfy those requests. Normal authorization and repository rules still apply.
 
